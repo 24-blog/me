@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markup Editor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #fafaf8;
+    --surface: #f2f0eb;
+    --surface2: #e8e5dd;
+    --border: #d4cfc3;
+    --border-light: #e8e4db;
+    --gold: #8a6f2e;
+    --gold-dim: #b8952a;
+    --text: #2a2520;
+    --text-dim: #6a6050;
+    --text-muted: #a09080;
+    --accent: #7a5f20;
+    --red: #c04040;
+    --green: #3a7a3a;
+    --link-green: #1a6040;
+    --link-green-border: #8acca8;
+    --ruby-blue: #3060a0;
+    --ruby-blue-border: #90b0d8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Serif JP', serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 13px;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .header-sep { flex: 1; }
+  .mode-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--border-light);
+    border-radius: 4px;
+    padding: 2px;
+  }
+  .mode-btn {
+    padding: 4px 12px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mode-btn.active {
+    background: #fff;
+    color: var(--gold);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .tag-group {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    padding-right: 8px;
+    border-right: 1px solid var(--border-light);
+  }
+  .tag-group:last-child { border-right: none; }
+  .group-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    margin-right: 2px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .tag-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-dim);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .tag-btn:hover {
+    background: var(--surface);
+    border-color: var(--gold-dim);
+    color: var(--gold);
+  }
+  .tag-btn:active {
+    transform: translateY(1px);
+    background: var(--surface2);
+    box-shadow: none;
+  }
+
+  /* ruby */
+  .tag-btn[data-tag="ruby"] { color: var(--ruby-blue); border-color: var(--ruby-blue-border); }
+  .tag-btn[data-tag="ruby"]:hover { border-color: var(--ruby-blue); color: #1040a0; background: #f0f4fc; }
+
+  /* link */
+  .tag-btn[data-tag^="link"],
+  .tag-btn[data-tag="newtab"],
+  .tag-btn[data-tag="nounderline"] { color: var(--link-green); border-color: var(--link-green-border); }
+  .tag-btn[data-tag^="link"]:hover,
+  .tag-btn[data-tag="newtab"]:hover,
+  .tag-btn[data-tag="nounderline"]:hover { border-color: var(--link-green); background: #f0faf5; }
+
+  /* undo/redo/clear */
+  .tool-btn {
+    padding: 4px 8px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-dim);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.12s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .tool-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .tool-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Main ── */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    overflow: hidden;
+  }
+  .main.single { grid-template-columns: 1fr; }
+
+  .pane {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+  .pane:last-child { border-right: none; }
+
+  .pane-header {
+    padding: 0 16px;
+    height: 28px;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--surface);
+    text-transform: uppercase;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #editor {
+    flex: 1;
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text);
+    background: #fff;
+    border: none;
+    outline: none;
+    resize: none;
+    white-space: pre-wrap;
+    overflow-y: auto;
+  }
+  #editor::selection { background: rgba(138,111,46,0.15); }
+  #editor::-webkit-scrollbar { width: 4px; }
+  #editor::-webkit-scrollbar-track { background: transparent; }
+  #editor::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  #preview {
+    flex: 1;
+    padding: 24px;
+    font-size: 14px;
+    line-height: 2;
+    background: #fff;
+    overflow-y: auto;
+    color: var(--text);
+  }
+  #preview::-webkit-scrollbar { width: 4px; }
+  #preview::-webkit-scrollbar-track { background: transparent; }
+  #preview::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* preview内スタイル */
+  #preview h2 { font-size: 1.4em; font-weight: 600; color: var(--gold); margin: 1em 0 0.4em; border-bottom: 1px solid var(--border-light); padding-bottom: 4px; }
+  #preview h3 { font-size: 1.2em; font-weight: 600; color: var(--gold); margin: 0.8em 0 0.3em; }
+  #preview h4 { font-size: 1.05em; font-weight: 600; margin: 0.8em 0 0.3em; }
+  #preview h5, #preview h6 { font-size: 1em; font-weight: 400; margin: 0.6em 0 0.2em; }
+  #preview b, #preview strong { color: #1a1510; }
+  #preview i, #preview em { color: var(--text-dim); font-style: italic; }
+  #preview u { text-decoration: underline; text-underline-offset: 3px; }
+  #preview small { font-size: 0.8em; color: var(--text-muted); }
+  #preview big { font-size: 1.2em; }
+  #preview code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: var(--surface2); padding: 1px 5px; border-radius: 2px; color: #2a6040; }
+  #preview blockquote { border-left: 2px solid var(--gold-dim); padding-left: 16px; color: var(--text-dim); margin: 8px 0; font-style: italic; }
+  #preview center { text-align: center; }
+  #preview a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+  #preview ruby rt { font-size: 0.6em; color: var(--text-muted); }
+
+  /* ── ステータスバー ── */
+  .statusbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 5px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .statusbar span { color: var(--text-dim); }
+  .statusbar-sep { flex: 1; }
+
+  /* ── 自動保存インジケーター ── */
+  .autosave-indicator {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.5s;
+    letter-spacing: 0.03em;
+  }
+  .autosave-indicator.visible { opacity: 1; }
+  .autosave-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+  }
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+  .autosave-dot.saving { animation: dot-pulse 0.5s ease-in-out 2; }
+
+  /* ── コピーボタン ── */
+  .copy-btn {
+    padding: 2px 8px;
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text-muted);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.12s;
+    letter-spacing: 0.05em;
+  }
+  .copy-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(50,40,30,0.4);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px;
+    min-width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+  }
+  .modal h3 { font-size: 13px; font-weight: 400; color: var(--gold); letter-spacing: 0.1em; }
+  .modal input {
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    outline: none;
+  }
+  .modal input:focus { border-color: var(--gold-dim); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .modal-ok {
+    padding: 6px 16px; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    background: var(--gold-dim); border: none; border-radius: 3px; color: #fff; cursor: pointer;
+  }
+  .modal-ok:hover { background: var(--gold); }
+  .modal-cancel {
+    padding: 6px 16px; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; color: var(--text-dim); cursor: pointer;
+  }
+
+  /* flash */
+  @keyframes flash {
+    0% { background: rgba(138,111,46,0.10); }
+    100% { background: #fff; }
+  }
+  .flash { animation: flash 0.4s ease-out; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Markup Editor</h1>
+  <div class="header-sep"></div>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btnSplit" onclick="setMode('split')">Split</button>
+    <button class="mode-btn" id="btnEdit" onclick="setMode('edit')">Edit</button>
+    <button class="mode-btn" id="btnPreview" onclick="setMode('preview')">Preview</button>
+  </div>
+  <div style="width:8px"></div>
+  <button class="tool-btn" onclick="undo()" title="Undo">↩</button>
+  <button class="tool-btn" onclick="redo()" title="Redo">↪</button>
+  <button class="tool-btn danger" onclick="clearAll()" title="クリア" style="margin-left:4px">✕</button>
+</header>
+
+<div class="toolbar">
+
+  <div class="tag-group">
+    <span class="group-label">size</span>
+    <button class="tag-btn" data-tag="small" onclick="wrapTag('small')">small</button>
+    <button class="tag-btn" data-tag="big" onclick="wrapTag('big')">big</button>
+  </div>
+
+  <div class="tag-group">
+    <span class="group-label">marker</span>
+    <button class="tag-btn" onclick="wrapCustom('<span style=&quot;background-color:#ffff80;&quot;>','</span>')" style="background:#fffff0;color:#808000;border-color:#c8c060">▌黄</button>
+    <button class="tag-btn" onclick="wrapCustom('<span style=&quot;background: linear-gradient(transparent 60%, #ff0000 0%);&quot;>','</span>')" style="background:#fff5f5;color:#c04040;border-color:#e08080">▌赤線</button>
+  </div>
+
+  <div class="tag-group">
+    <span class="group-label">line</span>
+    <button class="tag-btn" data-tag="underline" onclick="wrapTag('u')"><u>U</u></button>
+    <button class="tag-btn" onclick="wrapCustom('<span style=&quot;text-decoration: underline; text-decoration-color: #FF0000; text-decoration-thickness: 1px; text-underline-offset: 1px;&quot;>','</span>')" style="color:#c04040;border-color:#e0a0a0"><u style="text-decoration-color:#c04040">U赤</u></button>
+  </div>
+
+  <div class="tag-group">
+    <span class="group-label">emphasis</span>
+    <button class="tag-btn" data-tag="bold" onclick="wrapTag('b')"><b>B</b></button>
+    <button class="tag-btn" data-tag="italic" onclick="wrapTag('i')"><i>I</i></button>
+  </div>
+
+  <div class="tag-group">
+    <span class="group-label">ruby</span>
+    <button class="tag-btn" data-tag="ruby" onclick="openRubyModal()">ruby</button>
+  </div>
+
+  <div class="tag-group">
+    <span class="group-label">block</span>
+    <button class="tag-btn" onclick="wrapTag('center')">center</button>
+    <button class="tag-btn" onclick="wrapTag('blockquote')">quote</button>
+    <button class="tag-btn" onclick="wrapTag('code')">code</button>
+  </div>
+
+  <div class="tag-group">
+    <span class="group-label">heading</span>
+    <button class="tag-btn" onclick="wrapTag('h2')">h2</button>
+    <button class="tag-btn" onclick="wrapTag('h3')">h3</button>
+    <button class="tag-btn" onclick="wrapTag('h4')">h4</button>
+    <button class="tag-btn" onclick="wrapTag('h5')">h5</button>
+    <button class="tag-btn" onclick="wrapTag('h6')">h6</button>
+  </div>
+
+  <div class="tag-group">
+    <span class="group-label">link</span>
+    <button class="tag-btn" data-tag="link" onclick="openLinkModal('normal')">a</button>
+    <button class="tag-btn" data-tag="newtab" onclick="openLinkModal('newtab')">a↗</button>
+    <button class="tag-btn" data-tag="nounderline" onclick="openLinkModal('nounderline')">a̶̲</button>
+  </div>
+
+  <div class="tag-group">
+    <span class="group-label">comment</span>
+    <button class="tag-btn" onclick="wrapComment('html')">HTML</button>
+    <button class="tag-btn" onclick="wrapComment('css')">CSS</button>
+  </div>
+
+  <div class="tag-group">
+    <button class="tag-btn danger" onclick="stripTags()" style="color:#c04040;border-color:#e0a0a0">選択範囲からTagを除去</button>
+  </div>
+
+</div>
+
+<div class="main" id="mainArea">
+  <div class="pane" id="editPane">
+    <div class="pane-header">
+      <span>editor</span>
+      <button class="copy-btn" id="copyBtn" onclick="copyEditor()">copy</button>
+    </div>
+    <textarea id="editor" placeholder="テキストを選択してボタンを押すとタグで囲まれます。" spellcheck="false"></textarea>
+  </div>
+  <div class="pane" id="previewPane">
+    <div class="pane-header">
+      <span>preview</span>
+    </div>
+    <div id="preview"></div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span>chars: <span id="statChars">0</span></span>
+  <span>lines: <span id="statLines">1</span></span>
+  <span id="statSel" style="color:var(--gold-dim)"></span>
+  <div class="statusbar-sep"></div>
+  <div class="autosave-indicator" id="autosaveIndicator">
+    <div class="autosave-dot" id="autosaveDot"></div>
+    <span>自動保存されています（ブラウザに一時保存中）</span>
+  </div>
+</div>
+
+<!-- Ruby Modal -->
+<div class="modal-overlay" id="rubyModal">
+  <div class="modal">
+    <h3>Ruby / ふりがな</h3>
+    <input type="text" id="rubyText" placeholder="親文字（空欄で選択テキストを使用）">
+    <input type="text" id="rubyRt" placeholder="ふりがな（rt）" autofocus>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('rubyModal')">キャンセル</button>
+      <button class="modal-ok" onclick="insertRuby()">挿入</button>
+    </div>
+  </div>
+</div>
+
+<!-- Link Modal -->
+<div class="modal-overlay" id="linkModal">
+  <div class="modal">
+    <h3>Link</h3>
+    <input type="text" id="linkHref" placeholder="URL (https://...)" autofocus>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal('linkModal')">キャンセル</button>
+      <button class="modal-ok" onclick="insertLink()">挿入</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const editor = document.getElementById('editor');
+const preview = document.getElementById('preview');
+
+// ── Web Audio（レトロ電子音）──
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function beep(type) {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const cfg = {
+    insert: { freqs: [1200, 800],  dur: 0.055, vol: 0.10, wave: 'square'   },
+    undo:   { freqs: [600, 400],   dur: 0.075, vol: 0.09, wave: 'square'   },
+    redo:   { freqs: [400, 700],   dur: 0.075, vol: 0.09, wave: 'square'   },
+    copy:   { freqs: [880, 1100],  dur: 0.10,  vol: 0.09, wave: 'sine'     },
+    clear:  { freqs: [220, 160],   dur: 0.16,  vol: 0.11, wave: 'sawtooth' },
+    save:   { freqs: [1400],       dur: 0.04,  vol: 0.06, wave: 'square'   },
+    mode:   { freqs: [700, 900],   dur: 0.065, vol: 0.07, wave: 'square'   },
+  };
+  const c = cfg[type] || cfg.insert;
+  const now = audioCtx.currentTime;
+  c.freqs.forEach((f, i) => {
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = c.wave;
+    osc.frequency.setValueAtTime(f, now + i * c.dur);
+    gain.gain.setValueAtTime(c.vol, now + i * c.dur);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + i * c.dur + c.dur * 0.88);
+    osc.start(now + i * c.dur);
+    osc.stop(now  + i * c.dur + c.dur);
+  });
+}
+
+// ── Undo/Redo ──
+let history  = [''];
+let histIndex = 0;
+
+function saveHistory() {
+  const val = editor.value;
+  if (val === history[histIndex]) return;
+  history = history.slice(0, histIndex + 1);
+  history.push(val);
+  if (history.length > 200) history.shift();
+  histIndex = history.length - 1;
+}
+
+function undo() {
+  if (histIndex > 0) {
+    histIndex--;
+    editor.value = history[histIndex];
+    updatePreview(); updateStatus(); scheduleSave(); beep('undo');
+  }
+}
+function redo() {
+  if (histIndex < history.length - 1) {
+    histIndex++;
+    editor.value = history[histIndex];
+    updatePreview(); updateStatus(); scheduleSave(); beep('redo');
+  }
+}
+
+// ── Core wrap ──
+function wrapTag(tag) {
+  const s = editor.selectionStart, e = editor.selectionEnd, val = editor.value;
+  const sel = val.substring(s, e);
+  const wrapped = `<${tag}>${sel}</${tag}>`;
+  editor.value = val.substring(0, s) + wrapped + val.substring(e);
+  editor.selectionStart = s + `<${tag}>`.length;
+  editor.selectionEnd   = s + `<${tag}>`.length + sel.length;
+  editor.focus();
+  saveHistory(); updatePreview(); updateStatus(); flashEditor(); scheduleSave(); beep('insert');
+}
+
+function wrapCustom(open, close) {
+  const o = open.replace(/&quot;/g, '"'), c = close.replace(/&quot;/g, '"');
+  const s = editor.selectionStart, e = editor.selectionEnd, val = editor.value;
+  const sel = val.substring(s, e);
+  editor.value = val.substring(0, s) + o + sel + c + val.substring(e);
+  editor.selectionStart = s + o.length;
+  editor.selectionEnd   = s + o.length + sel.length;
+  editor.focus();
+  saveHistory(); updatePreview(); updateStatus(); flashEditor(); scheduleSave(); beep('insert');
+}
+
+// ── Comment ──
+function wrapComment(type) {
+  const s = editor.selectionStart, e = editor.selectionEnd, val = editor.value;
+  const sel = val.substring(s, e).trim();
+  const wrapped = type === 'html' ? `<!-- ${sel} -->` : `/* --- ${sel} --- */`;
+  editor.value = val.substring(0, s) + wrapped + val.substring(e);
+  editor.focus();
+  saveHistory(); updatePreview(); updateStatus(); flashEditor(); scheduleSave(); beep('insert');
+}
+
+// ── Strip tags ──
+function stripTags() {
+  const s = editor.selectionStart, e = editor.selectionEnd, val = editor.value;
+  if (s === e) return;
+  const stripped = val.substring(s, e).replace(/<[^>]+>/g, '');
+  editor.value = val.substring(0, s) + stripped + val.substring(e);
+  editor.selectionStart = s;
+  editor.selectionEnd   = s + stripped.length;
+  editor.focus();
+  saveHistory(); updatePreview(); updateStatus(); scheduleSave(); beep('insert');
+}
+
+// ── Ruby Modal ──
+let rubySelStart = 0, rubySelEnd = 0;
+
+function openRubyModal() {
+  rubySelStart = editor.selectionStart;
+  rubySelEnd   = editor.selectionEnd;
+  document.getElementById('rubyText').value = editor.value.substring(rubySelStart, rubySelEnd);
+  document.getElementById('rubyRt').value = '';
+  document.getElementById('rubyModal').classList.add('open');
+  setTimeout(() => document.getElementById('rubyRt').focus(), 50);
+  beep('mode');
+}
+
+function insertRuby() {
+  const base = document.getElementById('rubyText').value;
+  const rt   = document.getElementById('rubyRt').value;
+  if (!rt) { closeModal('rubyModal'); return; }
+  const val = editor.value;
+  editor.value = val.substring(0, rubySelStart) + `<ruby>${base}<rt>${rt}</rt></ruby>` + val.substring(rubySelEnd);
+  editor.focus();
+  closeModal('rubyModal');
+  saveHistory(); updatePreview(); updateStatus(); flashEditor(); scheduleSave(); beep('insert');
+}
+
+// ── Link Modal ──
+let linkSelStart = 0, linkSelEnd = 0, linkType = 'normal';
+
+function openLinkModal(type) {
+  linkSelStart = editor.selectionStart;
+  linkSelEnd   = editor.selectionEnd;
+  linkType     = type;
+  document.getElementById('linkHref').value = '';
+  document.getElementById('linkModal').classList.add('open');
+  setTimeout(() => document.getElementById('linkHref').focus(), 50);
+  beep('mode');
+}
+
+function insertLink() {
+  const href = document.getElementById('linkHref').value.trim();
+  const val  = editor.value;
+  const sel  = val.substring(linkSelStart, linkSelEnd);
+  let open;
+  if      (linkType === 'newtab')      open = `<a href="${href}" target="_blank" rel="noopener">`;
+  else if (linkType === 'nounderline') open = `<a href="${href}" style="text-decoration:none;">`;
+  else                                 open = `<a href="${href}">`;
+  editor.value = val.substring(0, linkSelStart) + open + sel + '</a>' + val.substring(linkSelEnd);
+  editor.focus();
+  closeModal('linkModal');
+  saveHistory(); updatePreview(); updateStatus(); flashEditor(); scheduleSave(); beep('insert');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  editor.focus();
+}
+
+document.getElementById('rubyRt').addEventListener('keydown',  e => { if (e.key === 'Enter') insertRuby();  if (e.key === 'Escape') closeModal('rubyModal'); });
+document.getElementById('linkHref').addEventListener('keydown', e => { if (e.key === 'Enter') insertLink();  if (e.key === 'Escape') closeModal('linkModal'); });
+document.getElementById('rubyText').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('rubyRt').focus(); });
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ── Preview ──
+function updatePreview() { preview.innerHTML = editor.value; }
+
+// ── Status ──
+function updateStatus() {
+  const val = editor.value;
+  document.getElementById('statChars').textContent = val.length;
+  document.getElementById('statLines').textContent = val.split('\n').length;
+  const s = editor.selectionStart, e = editor.selectionEnd;
+  const sel = document.getElementById('statSel');
+  sel.textContent = (s !== e) ? `sel: ${e - s} chars` : '';
+}
+
+// ── Flash ──
+function flashEditor() {
+  editor.classList.remove('flash');
+  void editor.offsetWidth;
+  editor.classList.add('flash');
+}
+
+// ── Mode ──
+function setMode(mode) {
+  const main = document.getElementById('mainArea');
+  const ep   = document.getElementById('editPane');
+  const pp   = document.getElementById('previewPane');
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  if (mode === 'split') {
+    main.classList.remove('single'); ep.style.display = ''; pp.style.display = '';
+    document.getElementById('btnSplit').classList.add('active');
+  } else if (mode === 'edit') {
+    main.classList.add('single'); ep.style.display = ''; pp.style.display = 'none';
+    document.getElementById('btnEdit').classList.add('active');
+  } else {
+    main.classList.add('single'); ep.style.display = 'none'; pp.style.display = '';
+    document.getElementById('btnPreview').classList.add('active');
+  }
+  beep('mode');
+}
+
+function clearAll() {
+  if (!editor.value || confirm('内容をクリアしますか？')) {
+    editor.value = '';
+    saveHistory(); updatePreview(); updateStatus(); scheduleSave(); beep('clear');
+  }
+}
+
+// ── Copy ──
+function copyEditor() {
+  const btn = document.getElementById('copyBtn');
+  if (!editor.value) return;
+  const done = () => {
+    btn.textContent = 'copied!';
+    btn.classList.add('copied');
+    beep('copy');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1800);
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(editor.value).then(done).catch(() => {
+      editor.select(); document.execCommand('copy'); done();
+    });
+  } else {
+    editor.select(); document.execCommand('copy'); done();
+  }
+}
+
+// ── localStorage 自動保存 ──
+const STORAGE_KEY = 'markup-editor-v1';
+const indicator   = document.getElementById('autosaveIndicator');
+const dot         = document.getElementById('autosaveDot');
+let saveTimer     = null;
+let hideTimer     = null;
+
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    localStorage.setItem(STORAGE_KEY, editor.value);
+    dot.classList.remove('saving');
+    void dot.offsetWidth;
+    dot.classList.add('saving');
+    indicator.classList.add('visible');
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => indicator.classList.remove('visible'), 2800);
+    beep('save');
+  }, 800);
+}
+
+function restoreFromStorage() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && saved.length > 0) {
+      editor.value = saved;
+      updatePreview(); updateStatus(); saveHistory();
+      indicator.classList.add('visible');
+      setTimeout(() => indicator.classList.remove('visible'), 2200);
+    }
+  } catch(e) {}
+}
+
+// ── Events ──
+editor.addEventListener('input',   () => { saveHistory(); updatePreview(); updateStatus(); scheduleSave(); });
+editor.addEventListener('keyup',   updateStatus);
+editor.addEventListener('mouseup', updateStatus);
+editor.addEventListener('select',  updateStatus);
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(); }
+  if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key === 'z' || e.key === 'y')) { e.preventDefault(); redo(); }
+});
+
+// ── 初期化 ──
+restoreFromStorage();
+updatePreview();
+updateStatus();
+</script>
+</body>
+</html>
