@@ -1,5 +1,5 @@
 Preview<br>
-https://24-blog.github.io/roulette-me/
+24-blog.github.io/me/
 
 
 ⚠️COPYRIGHT<br>
