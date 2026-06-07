@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Markup Editor</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8a6f2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Markup Editor">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -452,7 +459,7 @@
       <span>editor</span>
       <button class="copy-btn" id="copyBtn" onclick="copyEditor()">copy</button>
     </div>
-    <textarea id="editor" placeholder="テキストを選択してボタンを押すとタグで囲まれます。(800msデバウンスでlocalStorageに自動保存)" spellcheck="false"></textarea>
+    <textarea id="editor" placeholder="テキストを選択してボタンを押すとタグで囲まれます。" spellcheck="false"></textarea>
   </div>
   <div class="pane" id="previewPane">
     <div class="pane-header">
@@ -779,6 +786,15 @@ document.addEventListener('keydown', e => {
 restoreFromStorage();
 updatePreview();
 updateStatus();
+
+// ── Service Worker 登録 ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('[SW] registered:', reg.scope))
+      .catch(err => console.log('[SW] registration failed:', err));
+  });
+}
 </script>
 </body>
 </html>
