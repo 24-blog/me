@@ -89,6 +89,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+    align-items: center;
     flex-shrink: 0;
   }
 
@@ -362,10 +363,6 @@
     <button class="mode-btn" id="btnEdit" onclick="setMode('edit')">Edit</button>
     <button class="mode-btn" id="btnPreview" onclick="setMode('preview')">Preview</button>
   </div>
-  <div style="width:8px"></div>
-  <button class="tool-btn" onclick="undo()" title="Undo">↩</button>
-  <button class="tool-btn" onclick="redo()" title="Redo">↪</button>
-  <button class="tool-btn danger" onclick="clearAll()" title="クリア" style="margin-left:4px">✕</button>
 </header>
 
 <div class="toolbar">
@@ -428,8 +425,13 @@
     <button class="tag-btn" onclick="wrapComment('css')">CSS</button>
   </div>
 
-  <div class="tag-group">
+  <div class="tag-group" style="flex:1;justify-content:space-between;border-right:none;padding-right:0">
     <button class="tag-btn danger" onclick="stripTags()" style="color:#c04040;border-color:#e0a0a0">選択範囲からTagを除去</button>
+    <div style="display:flex;gap:4px;margin-left:auto">
+      <button class="tool-btn" onclick="undo()" title="Undo (Ctrl+Z)">↩</button>
+      <button class="tool-btn" onclick="redo()" title="Redo (Ctrl+Y)">↪</button>
+      <button class="tool-btn danger" onclick="clearAll()" title="クリア">✕</button>
+    </div>
   </div>
 
 </div>
@@ -696,10 +698,8 @@ function setMode(mode) {
 }
 
 function clearAll() {
-  if (!editor.value || confirm('内容をクリアしますか？')) {
-    editor.value = '';
-    saveHistory(); updatePreview(); updateStatus(); scheduleSave(); beep('clear');
-  }
+  editor.value = '';
+  saveHistory(); updatePreview(); updateStatus(); scheduleSave(); beep('clear');
 }
 
 // ── Copy ──
