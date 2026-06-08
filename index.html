@@ -443,7 +443,7 @@
   </div>
 
   <div class="tag-group" style="flex:1;justify-content:space-between;border-right:none;padding-right:0">
-    <button class="tag-btn danger" onclick="stripTags()" style="color:#c04040;border-color:#e0a0a0">選択範囲内のTagを除去</button>
+    <button class="tag-btn danger" onclick="stripTags()" style="color:#c04040;border-color:#e0a0a0">選択範囲内のTAGを除去</button>
     <div style="display:flex;gap:4px;margin-left:auto">
       <button class="tool-btn" onclick="undo()" title="Undo (Ctrl+Z)">↩</button>
       <button class="tool-btn" onclick="redo()" title="Redo (Ctrl+Y)">↪</button>
@@ -459,7 +459,7 @@
       <span>editor</span>
       <button class="copy-btn" id="copyBtn" onclick="copyEditor()">copy</button>
     </div>
-    <textarea id="editor" placeholder="テキストを選択してボタンを押すとタグで囲まれます。" spellcheck="false"></textarea>
+    <textarea id="editor" placeholder="テキストを選択してボタンを押すとTAGで囲みます。(800msデバウンス後にlocalStorageへ自動保存されます。)" spellcheck="false"></textarea>
   </div>
   <div class="pane" id="previewPane">
     <div class="pane-header">
