@@ -418,6 +418,8 @@
     <button class="tag-btn" onclick="wrapTag('center')">center</button>
     <button class="tag-btn" onclick="wrapTag('blockquote')">quote</button>
     <button class="tag-btn" onclick="wrapTag('code')">code</button>
+    <button class="tag-btn" onclick="wrapCustom('&lt;&gt;','&lt;/&gt;')" title="空タグ &lt;&gt;&lt;/&gt;">&lt;&gt;&lt;/&gt;</button>
+    <button class="tag-btn" onclick="insertVoid('br')" title="改行 &lt;br&gt;">&lt;br&gt;</button>
   </div>
 
   <div class="tag-group">
@@ -459,7 +461,7 @@
       <span>editor</span>
       <button class="copy-btn" id="copyBtn" onclick="copyEditor()">copy</button>
     </div>
-    <textarea id="editor" placeholder="テキストを選択してボタンを押すとTAGで囲みます。(800msデバウンス後にlocalStorageへ自動保存します。)" spellcheck="false"></textarea>
+    <textarea id="editor" placeholder="テキストを選択してボタンを押すとTAGで囲みます。(改行TAGはカーソル位置。800msデバウンス後にlocalStorageへ自動保存。)" spellcheck="false"></textarea>
   </div>
   <div class="pane" id="previewPane">
     <div class="pane-header">
@@ -586,6 +588,16 @@ function wrapCustom(open, close) {
   editor.value = val.substring(0, s) + o + sel + c + val.substring(e);
   editor.selectionStart = s + o.length;
   editor.selectionEnd   = s + o.length + sel.length;
+  editor.focus();
+  saveHistory(); updatePreview(); updateStatus(); flashEditor(); scheduleSave(); beep('insert');
+}
+
+// ── Void tag insert (br等、閉じタグなし) ──
+function insertVoid(tag) {
+  const s = editor.selectionStart, val = editor.value;
+  const insert = `<${tag}>`;
+  editor.value = val.substring(0, s) + insert + val.substring(s);
+  editor.selectionStart = editor.selectionEnd = s + insert.length;
   editor.focus();
   saveHistory(); updatePreview(); updateStatus(); flashEditor(); scheduleSave(); beep('insert');
 }
