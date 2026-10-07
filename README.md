@@ -5,5 +5,5 @@
 All non-code text authored by the repository owner is licensed under CC BY-NC-ND 4.0.
 
 
-> [!TIP]
+> [!IMPORTANT]
 > ​This editor is designed for Hatena Blog.
